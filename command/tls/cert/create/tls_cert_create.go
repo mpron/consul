@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/consul/agent/connect"
 	"github.com/hashicorp/consul/command/flags"
@@ -21,17 +22,18 @@ func New(ui cli.Ui) *cmd {
 }
 
 type cmd struct {
-	UI     cli.Ui
-	flags  *flag.FlagSet
-	ca     string
-	key    string
-	server bool
-	client bool
-	cli    bool
-	dc     string
-	days   int
-	domain string
-	help   string
+	UI       cli.Ui
+	flags    *flag.FlagSet
+	ca       string
+	key      string
+	server   bool
+	client   bool
+	cli      bool
+	dc       string
+	days     int
+	domain   string
+	help     string
+	dnsnames string
 }
 
 func (c *cmd) init() {
@@ -44,6 +46,7 @@ func (c *cmd) init() {
 	c.flags.IntVar(&c.days, "days", 365, "Provide number of days the certificate is valid for from now on, defaults to 1 year.")
 	c.flags.StringVar(&c.dc, "dc", "dc1", "Provide the datacenter. Matters only for -server certificates")
 	c.flags.StringVar(&c.domain, "domain", "consul", "Provide the domain. Matters only for -server certificates")
+	c.flags.StringVar(&c.dnsnames, "additional-dnsnames", "", "Provide additional comma-separated dnsnames for Subject Alternative Names.")
 	c.help = flags.Usage(help, c.flags)
 }
 
@@ -81,14 +84,18 @@ func (c *cmd) Run(args []string) int {
 	var extKeyUsage []x509.ExtKeyUsage
 	var name string
 
+	for _, d := range strings.Split(c.dnsnames, ",") {
+		DNSNames = append(DNSNames, strings.TrimSpace(d))
+	}
+
 	if c.server {
-		DNSNames = []string{fmt.Sprintf("server.%s.%s", c.dc, c.domain), "localhost"}
+		DNSNames = append(DNSNames, []string{fmt.Sprintf("server.%s.%s", c.dc, c.domain), "localhost"}...)
 		IPAddresses = []net.IP{net.ParseIP("127.0.0.1")}
 		extKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}
 		prefix = fmt.Sprintf("%s-server-%s", prefix, c.dc)
 		name = "Consul Server Certificate"
 	} else if c.client {
-		DNSNames = []string{"localhost"}
+		DNSNames = append(DNSNames, "localhost")
 		IPAddresses = []net.IP{net.ParseIP("127.0.0.1")}
 		extKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 		prefix = fmt.Sprintf("%s-client", prefix)

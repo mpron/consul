@@ -179,7 +179,7 @@ $ consul tls cert create -cli
 
 If you are trying to get members of you cluster, the CLI will return an error:
 
-```
+```shell
 $ consul members
 Error retrieving members:
   Get http://127.0.0.1:8500/v1/agent/members?segment=_all:
@@ -192,7 +192,7 @@ Error retrieving members:
 
 But it will work again if you provide the certificates you provided:
 
-```
+```shell
 $ consul members -ca-file=consul-ca.pem -client-cert=consul-cli-0.pem \
   -client-key=consul-cli-0-key.pem -http-addr="https://localhost:8501"
   Node     Address         Status  Type    Build     Protocol  DC   Segment
@@ -260,7 +260,7 @@ Your Consul agent will deny the connection straight away because `verify_incomin
 
 Since the browser doesn't present a certificate signed by our CA, you cannot access the UI. If you `curl` your HTTPS UI the following happens:
 
-```
+```shell
 $ curl https://localhost:8501/ui/ -k -I
 curl: (35) error:14094412:SSL routines:SSL3_READ_BYTES:sslv3 alert bad certificate
 ```
@@ -282,7 +282,7 @@ There is a combination of options however that allows us to keep using `verify_i
 
 With the new configuration, it should work:
 
-```
+```shell
 $ curl https://localhost:8501/ui/ -k -I
 HTTP/2 200
 ...
@@ -292,20 +292,50 @@ HTTP/2 200
 
 This step will take care of setting up the domain/ip you want to use to access the Consul UI. Unless thats `localhost` or `127.0.0.1` you will have to go through that because it won't work otherwise:
 
-```
-$ curl https://myconsului.com:8501/ui/ --resolve 'myconsului.com:8501:127.0.0.1' --cacert consul-ca.pem
+```shell
+$ curl https://myconsului.com:8501/ui/ \
+  --resolve 'myconsului.com:8501:127.0.0.1' \
+  --cacert consul-ca.pem
 curl: (51) SSL: no alternative certificate subject name matches target host name 'myconsului.com'
 ...
 ```
 
 The above command simulates a request a browser is making when you are trying to use the domain `myconsului.com` to access your UI. This time we do validate the certificates because the browser is doing the same and we also pass the Consul CA. The problem this time is that your domain is not in `Subject Alternative Name` of the Certificate. We can fix that by creating a certificate that has our domain:
 
-```
+```shell
 $ consul tls cert create -server -additional-dnsnames myconsului.com
+...
 ```
 
+And if you put your new cert into the configuration of the agent you picked to serve the UI and restart Consul, it works now:
+
+```shell
+$ curl https://myconsului.com:8501/ui/ \
+  --resolve 'myconsului.com:8501:127.0.0.1' \
+  --cacert consul-ca.pem -I
+HTTP/2 200
+...
+```
 
 ### Step 4: Trust the Consul CA
+
+So far we have provided curl with our CA so that it can verify the connection, but if we stop doing that it will complain and so will our browser if you are going to your UI on https://myconsului.com:
+
+```shell
+$ curl https://myconsului.com:8501/ui/ \
+  --resolve 'myconsului.com:8501:127.0.0.1'
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+...
+```
+
+You can fix that by trusting your Consul CA (`consul-ca.pem`) on your machine, please use Google to find out how to do that on your OS.
+
+```shell
+$ curl https://myconsului.com:8501/ui/ \
+  --resolve 'myconsului.com:8501:127.0.0.1' -I
+HTTP/2 200
+...
+```
 
 ## Summary
 
