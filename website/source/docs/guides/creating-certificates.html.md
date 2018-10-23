@@ -290,7 +290,7 @@ HTTP/2 200
 
 ### Step 3: Subject Alternative Name
 
-This step will take care of setting up the domain/ip you want to use to access the Consul UI. Unless thats `localhost` or `127.0.0.1` you will have to go through that because it won't work otherwise:
+This step will take care of setting up the domain you want to use to access the Consul UI. Unless thats `localhost` or `127.0.0.1` you will have to go through that because it won't work otherwise:
 
 ```shell
 $ curl https://myconsului.com:8501/ui/ \
