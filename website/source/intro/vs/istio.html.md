@@ -58,7 +58,7 @@ connection can be established or it can't. We believe
 service identity should be tied to layer 4, whereas layer 7 should be used
 for routing, telemetry, etc. We encourage users to use the pluggable data
 plane layer to use a proxy that supports the layer 7 features necessary
-for the cluster. Consul will be adding more layer 7 features in the future.
+for the cluster. Consul 1.5 and 1.6 add full layer 7 observability, advanced service failover, HTTP path-based routing, and traffic shifting.
 
 Consul implements automatic TLS certificate management complete with rotation
 support. Both leaf and root certificates can be rotated automatically across
